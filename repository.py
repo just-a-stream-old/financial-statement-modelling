@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 
 
-class MongoDatabase:
+class MongoRepository:
 
     def __init__(self, database: str, host: str = "localhost", port: str = 27017, username: str = None,
                  password: str = None):
