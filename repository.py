@@ -3,6 +3,8 @@ from pymongo import MongoClient
 
 class MongoRepository:
 
+    # Todo: Add return type hints to methods - forgot!
+
     def __init__(self, database: str, host: str = "localhost", port: str = 27017, username: str = None,
                  password: str = None):
         self.database = database

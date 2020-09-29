@@ -1,19 +1,31 @@
-import pandas as pd
-import pprint
+from sklearn.pipeline import Pipeline
+
 from repository import MongoRepository
+from service import FinancialStatementModellingService
+from transformer import TestTransformer, DropColumnsTransformer
 
 if __name__ == '__main__':
-    database = MongoRepository("nonprod")
+    # Todo: Construct dependencies somewhere else (factory?) and inject into service
+    # Repository Integration
+    repository = MongoRepository("nonprod")
+    # Full Transformation Pipeline
+    transform_pipeline = Pipeline([
+        ('placeholder_transformer', TestTransformer(do_dummy_transform=True)),
+        ('drop_columns_transformer', DropColumnsTransformer(["link", "finalLink"]))
+    ])
+    # Other required objects...
 
-    company_balance_sheets = database.find_one("balance_sheets", {}).get("balanceSheets")
+    # Create service instance w/ injected dependencies & run
+    service = FinancialStatementModellingService(repository, transform_pipeline)
+    transformed_dfs = service.train_model()
+    print(next(transformed_dfs))
 
-    df = pd.DataFrame(list(company_balance_sheets))
 
-    pprint.pprint(df.head())
 
-    # df_list = [pd.DataFrame.from_dict(balance_sheet, orient="index") for balance_sheet in company_balance_sheets]
-    #
-    # pprint.pprint(df_list[0])
+
+
+
+
 
 
 
