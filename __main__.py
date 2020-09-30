@@ -2,22 +2,22 @@ from sklearn.pipeline import Pipeline
 
 from repository import MongoRepository
 from service import FinancialStatementModellingService
-from transformer import TestTransformer, DropColumnsTransformer
+from transformer import DropColumnsTransformer
 
 if __name__ == '__main__':
     # Todo: Construct dependencies somewhere else (factory?) and inject into service
     # Repository Integration
     repository = MongoRepository("nonprod")
+
     # Full Transformation Pipeline
     transform_pipeline = Pipeline([
-        ('placeholder_transformer', TestTransformer(do_dummy_transform=True)),
         ('drop_columns_transformer', DropColumnsTransformer(["link", "finalLink"]))
     ])
     # Other required objects...
 
     # Create service instance w/ injected dependencies & run
     service = FinancialStatementModellingService(repository, transform_pipeline)
-    transformed_dfs = service.train_model()
+    transformed_dfs = service.run_service()
     print(next(transformed_dfs))
 
 
