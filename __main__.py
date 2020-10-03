@@ -17,8 +17,9 @@ if __name__ == '__main__':
 
     # Create service instance w/ injected dependencies & run
     service = FinancialStatementModellingService(repository, transform_pipeline)
-    transformed_dfs = service.run_service()
-    print(next(transformed_dfs))
+    df = service.run_service()
+
+
 
 
 
