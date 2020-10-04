@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     # Full Transformation Pipeline
     transform_pipeline = Pipeline([
-        ('drop_columns_transformer', DropColumnsTransformer(["link", "finalLink"]))
+        # ('drop_columns_transformer', DropColumnsTransformer(["link_x", "finalLink_x", "fillingDate_x", "acceptedDate_x"]))
     ])
 
     # Create service instance w/ injected dependencies & run

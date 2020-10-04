@@ -1,6 +1,7 @@
 from helper import log_time
 from repository import MongoRepository
 import pandas as pd
+from functools import reduce
 
 
 class DataHandler:
@@ -9,11 +10,11 @@ class DataHandler:
         self.repository = repository
 
     def generate_dataset(self):
-        balance_sheet_df = self.get_balance_sheet_df()
-        income_statement_df = self.get_income_statement_df()
-        cash_flow_df = self.get_cash_flow_df()
-
-        return [balance_sheet_df, income_statement_df, cash_flow_df]
+        statements_df = self.merge_dataframes(
+            [self.get_balance_sheet_df(), self.get_income_statement_df(), self.get_cash_flow_df()],
+            merge_on_columns=["symbol", "date", "period"]
+        )
+        return statements_df
 
     @log_time
     def get_balance_sheet_df(self):
@@ -41,6 +42,17 @@ class DataHandler:
             for symbol_cash_flow in document.get("cashFlows"):
                 dictionary_list.append(symbol_cash_flow)
         return pd.DataFrame.from_dict(dictionary_list)
+
+    @staticmethod
+    @log_time
+    def merge_dataframes(dataframes, merge_on_columns):
+        return reduce(
+            lambda left, right: pd.merge(
+                left, right,
+                how="inner", on=merge_on_columns
+            ),
+            dataframes
+        )
 
     @log_time
     def _get_time_series_df(self):

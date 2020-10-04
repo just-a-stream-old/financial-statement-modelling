@@ -11,7 +11,7 @@ class FinancialStatementModellingService:
 
     def run_service(self) -> list:
         statement_dfs = self.datahandler.generate_dataset()
-        statements_df_transformed = [self.transform_pipeline.transform(df) for df in statement_dfs]
+        statements_df_transformed = self.transform_pipeline.transform(statement_dfs)
         return statements_df_transformed
 
     def _generate_features(self):
