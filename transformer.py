@@ -12,7 +12,7 @@ class DropColumnsTransformer(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, x: pd.DataFrame, y: pd.DataFrame = None):
-        return x.drop(columns=self.columns_to_drop)
+        return x.drop(columns=self.columns_to_drop, axis=1)
 
 
 
