@@ -4,6 +4,7 @@ from repository import MongoRepository
 from service import FinancialStatementModellingService
 from transformer import DropColumnsTransformer
 
+
 if __name__ == '__main__':
     # Todo: Construct dependencies somewhere else (factory?) and inject into service
     # Repository Integration
