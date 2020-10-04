@@ -51,6 +51,7 @@ class FinancialStatementModellingService:
                 dictionary_list.append(symbol_cash_flow)
         return pd.DataFrame.from_dict(dictionary_list)
 
+    @log_time
     def _get_time_series_df(self):
         return self.repository.find_all("time_series_d1")
 
