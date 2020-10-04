@@ -52,7 +52,43 @@ class CashFlowExtractor:
 
     def __init__(self, cash_flow_df: pd.DataFrame):
         self.cash_flow_df = cash_flow_df
-        self.features_df = pd.DataFrame()
 
     def extract_features(self) -> pd.DataFrame:
-        return self.cash_flow_df
+        features_df = pd.DataFrame()
+        features_df = self.determine_net_income_per_cash_flow_from_operating_activities(features_df)
+        features_df = self.determine_if_positive_cash_flow_from_operating_activities(features_df)
+        features_df = self.determine_if_net_income_is_smaller_than_cash_flow_from_operating_activities(features_df)
+        return features_df
+
+    def determine_net_income_per_cash_flow_from_operating_activities(self, features_df: pd.DataFrame) -> pd.DataFrame:
+        features_df["net_income/cf_oa"] = self.cash_flow_df["netIncome"] / self.cash_flow_df["netCashProvidedByOperatingActivities"]
+        return features_df
+
+    def determine_if_positive_cash_flow_from_operating_activities(self, features_df: pd.DataFrame) -> pd.DataFrame:
+        if_positive_values = []
+        for cash in self.cash_flow_df["netCashProvidedByOperatingActivities"]:
+            if cash > 0:
+                if_positive_values.append(True)
+            else:
+                if_positive_values.append(False)
+        features_df["positive_cf_oa"] = if_positive_values
+        return features_df
+
+    def determine_if_net_income_is_smaller_than_cash_flow_from_operating_activities(self, features_df: pd.DataFrame) -> pd.DataFrame:
+        if_net_income_smaller_values = []
+        for net_income, cash_flow in zip(self.cash_flow_df["netIncome"], self.cash_flow_df["netCashProvidedByOperatingActivities"]):
+            if net_income < cash_flow:
+                if_net_income_smaller_values.append(True)
+            else:
+                if_net_income_smaller_values.append(False)
+        features_df["net_income_smaller_cf_oa"] = if_net_income_smaller_values
+        return features_df
+
+
+
+
+
+
+
+
+

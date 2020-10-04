@@ -13,7 +13,7 @@ class FinancialStatementModellingService:
         self.transform_pipeline = transform_pipeline
 
     def run_service(self) -> list:
-        # 1. Get Pre-Feature Data Dictionary
+        # 1. Generate Data Dictionary With Each Financial Statements Features
         statement_df_dictionary = self.datahandler.generate_dataset()
 
         # 2. Feature Engineering Per Financial Statement
