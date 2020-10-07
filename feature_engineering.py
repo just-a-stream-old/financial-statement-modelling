@@ -47,7 +47,6 @@ class BalanceSheetExtractor:
         # Other Ad Lib Features (No Research)
         features_df = self.determine_long_term_debt_per_total_debt(features_df)
         features_df = self.determine_total_investments_per_total_debt(features_df)
-        features_df = self.determine_long_term_investments_per_short_term_investments(features_df)
         return features_df
 
     def determine_net_tangible_assets_per_total_assets(self, features_df: pd.DataFrame) -> pd.DataFrame:
