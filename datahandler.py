@@ -1,3 +1,5 @@
+from functools import reduce
+
 from feature_engineering import FeatureExtractor
 from helper import log_time
 from repository import MongoRepository
@@ -11,12 +13,15 @@ class DataHandler:
         self.feature_extractor = feature_extractor
 
     def generate_dataset(self):
-        statement_df_dictionary = {
+        # Query Repository For Financials
+        financials_df_dictionary = {
             "balance_sheet_df": self._get_balance_sheet_df(),
             "income_statement_df": self._get_income_statement_df(),
             "cash_flow_df": self._get_cash_flow_df()
         }
-        return self.feature_extractor.extract_features(statement_df_dictionary)
+        # Extract Features
+        df_dict = self.feature_extractor.extract_features(financials_df_dictionary)
+        return self.merge_dataframes(df_dict.values(), merge_on_columns=["symbol", "date", "period"])
 
     @log_time
     def _get_balance_sheet_df(self):
@@ -48,3 +53,14 @@ class DataHandler:
     @log_time
     def _get_time_series_df(self):
         return self.repository.find_all("time_series_d1")
+
+    @staticmethod
+    @log_time
+    def merge_dataframes(dataframes, merge_on_columns: list, merge_how: str = "inner") -> pd.DataFrame:
+        return reduce(
+            lambda left, right: pd.merge(
+                left, right,
+                how=merge_how, on=merge_on_columns
+            ),
+            dataframes
+        )
