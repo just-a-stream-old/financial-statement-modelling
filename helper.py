@@ -2,7 +2,6 @@ import timeit
 
 
 def log_time(method):
-
     def wrapper(*args, **kwargs):
         start = timeit.default_timer()
         result = method(*args, **kwargs)
@@ -11,6 +10,3 @@ def log_time(method):
         return result
 
     return wrapper
-
-
-
