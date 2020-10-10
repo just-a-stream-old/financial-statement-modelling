@@ -13,7 +13,7 @@ class MongoRepository:
         self.username = username
         self.password = password
 
-    def query(self, collection: str, query: dict):
+    def find(self, collection: str, query: dict):
         return self._return_collection(collection).find(query)
 
     def find_one(self, collection: str, query=None):

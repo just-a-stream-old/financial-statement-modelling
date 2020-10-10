@@ -13,10 +13,9 @@ if __name__ == '__main__':
     repository = MongoRepository("nonprod")
 
     # Data Handler
-    feature_extractor = FeatureExtractor()
-    datahandler = DataHandler(repository, feature_extractor)
+    datahandler = DataHandler(repository, FeatureExtractor())
 
-    # Full Transformation Pipeline
+    # Full Pre-Processing Transformation Pipeline
     transform_pipeline = Pipeline([
         ('drop_duplicate_columns', DropDuplicateColumns()),
         ('drop_suffixes_transformer', DropColumnNameSuffix(["_x"]))
@@ -25,7 +24,7 @@ if __name__ == '__main__':
     # Create service instance w/ injected dependencies & run
     service = FinancialStatementModellingService(datahandler, transform_pipeline)
 
-    df = service.run_service()
+    df = service.train_model()
 
 
 

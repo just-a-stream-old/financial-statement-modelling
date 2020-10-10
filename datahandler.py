@@ -15,16 +15,26 @@ class DataHandler:
     def generate_dataset(self):
         # Query Repository For Financials
         financials_df_dictionary = {
-            "balance_sheet_df": self._get_balance_sheet_df(),
-            "income_statement_df": self._get_income_statement_df(),
+            # "balance_sheet_df": self._get_balance_sheet_df(),
+            # "income_statement_df": self._get_income_statement_df(),
             "cash_flow_df": self._get_cash_flow_df()
         }
-        # Extract Features
-        df_dict = self.feature_extractor.extract_features(financials_df_dictionary)
-        return self.merge_dataframes(df_dict.values(), merge_on_columns=["symbol", "date", "period"])
+        # Extract Features From Financials
+        # df_dict = self.feature_extractor.extract_features(financials_df_dictionary)
+
+        # Query Repository For Time Series
+        time_series_df = self._get_time_series_df(
+            financials_df_dictionary.get("cash_flow_df")["symbol"].tolist(),
+            financials_df_dictionary.get("cash_flow_df")["date"].tolist()
+        )
+
+        # Extract Labels From Time Series
+
+        # return self.merge_dataframes(df_dict.values(), merge_on_columns=["symbol", "date", "period"])
+        return time_series_df
 
     @log_time
-    def _get_balance_sheet_df(self):
+    def _get_balance_sheet_df(self) -> pd.DataFrame:
         dictionary_list = []
         for document in self._find_all_statement("balance_sheets"):
             for symbol_balance_sheet in document.get("balanceSheets"):
@@ -35,7 +45,7 @@ class DataHandler:
         return self.repository.find_all(statement_type)
 
     @log_time
-    def _get_income_statement_df(self):
+    def _get_income_statement_df(self) -> pd.DataFrame:
         dictionary_list = []
         for document in self._find_all_statement("income_statements"):
             for symbol_income_statement in document.get("incomeStatements"):
@@ -43,7 +53,7 @@ class DataHandler:
         return pd.DataFrame.from_dict(dictionary_list)
 
     @log_time
-    def _get_cash_flow_df(self):
+    def _get_cash_flow_df(self) -> pd.DataFrame:
         dictionary_list = []
         for document in self._find_all_statement("cash_flows"):
             for symbol_cash_flow in document.get("cashFlows"):
@@ -51,8 +61,25 @@ class DataHandler:
         return pd.DataFrame.from_dict(dictionary_list)
 
     @log_time
-    def _get_time_series_df(self):
-        return self.repository.find_all("time_series_d1")
+    def _get_time_series_df(self, symbols: list, dates: list) -> pd.DataFrame:
+        dictionary_list = []
+
+        queries = (self.repository.find_one("time_series_d1", {"symbol": symbol}) for symbol in symbols)
+
+        for document, date in zip(queries, dates):
+
+            for candle in document.get("timeSeries"):
+
+                if candle.get("timestamp") == date:
+                    dictionary_list.append(
+                        {
+                            "symbol": document.get("symbol"),
+                            "date": candle.get("timestamp"),
+                            "adjusted_close": candle.get("adjustedClose")
+                        }
+                    )
+
+        return pd.DataFrame.from_dict(dictionary_list)
 
     @staticmethod
     @log_time
