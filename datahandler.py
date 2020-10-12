@@ -1,4 +1,5 @@
 from functools import reduce
+import datetime
 
 from feature_engineering import FeatureExtractor
 from helper import log_time
@@ -17,21 +18,24 @@ class DataHandler:
         financials_df_dictionary = {
             # "balance_sheet_df": self._get_balance_sheet_df(),
             # "income_statement_df": self._get_income_statement_df(),
-            "cash_flow_df": self._get_cash_flow_df()
+            # "cash_flow_df": self._get_cash_flow_df()
         }
         # Extract Features From Financials
         # df_dict = self.feature_extractor.extract_features(financials_df_dictionary)
 
         # Query Repository For Time Series
         time_series_df = self._get_time_series_df(
-            financials_df_dictionary.get("cash_flow_df")["symbol"].tolist(),
-            financials_df_dictionary.get("cash_flow_df")["date"].tolist()
+            # financials_df_dictionary.get("cash_flow_df")["symbol"].unique().tolist(),
+            # financials_df_dictionary.get("cash_flow_df")["date"].tolist()
+            list({"AAPL", "AAPL", "AAPL", "AAPL", "AAPL", "AAPL", "AAPL"}),
+            ["2020-03-28", "2018-12-29", "2018-06-30", "2011-06-25", "2005-06-25", "1993-06-25", "1991-03-29"]
         )
 
         # Extract Labels From Time Series
 
         # return self.merge_dataframes(df_dict.values(), merge_on_columns=["symbol", "date", "period"])
         return time_series_df
+        # return self._get_cash_flow_df()
 
     @log_time
     def _get_balance_sheet_df(self) -> pd.DataFrame:
@@ -64,22 +68,82 @@ class DataHandler:
     def _get_time_series_df(self, symbols: list, dates: list) -> pd.DataFrame:
         dictionary_list = []
 
-        queries = (self.repository.find_one("time_series_d1", {"symbol": symbol}) for symbol in symbols)
+        # EXTRACT MANY TESTABLE METHODS OUT OF THIS BAD BOY
 
-        for document, date in zip(queries, dates):
+        for document in (self.repository.find_one("time_series_d1", {"symbol": symbol}) for symbol in symbols):
 
-            for candle in document.get("timeSeries"):
+            if self.is_valid_timeseries_document(document) is False:
+                continue
 
-                if candle.get("timestamp") == date:
-                    dictionary_list.append(
-                        {
-                            "symbol": document.get("symbol"),
-                            "date": candle.get("timestamp"),
-                            "adjusted_close": candle.get("adjustedClose")
-                        }
-                    )
+            closes_7d_ma = self.determine_adjusted_close_ma(document, window_size=7)
+
+            for index, (candle, close) in enumerate(zip(document.get("timeSeries"), closes_7d_ma)):
+
+                # Put below into a function so I can easily continue the outer loop if the date is found
+                # https://stackoverflow.com/questions/1859072/python-continuing-to-next-iteration-in-outer-loop
+
+                for date in dates:
+
+                    day_of_the_week = datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
+
+                    if day_of_the_week < 5:
+
+                        if date == candle.get("timestamp"):
+                            dictionary_list.append(
+                                {
+                                    "symbol": document.get("symbol"),
+                                    "date": candle.get("timestamp"),
+                                    "adjusted_close_ma": close
+                                }
+                            )
+                            print(f"Success at index: {index}")
+
+                        else:
+                            pass
+                            # print(f"Failure at index: {index}, even though it was not a weekend date.")
+
+                    else:
+                        days_since_monday = day_of_the_week - 7
+                        try:
+                            dictionary_list.append(
+                                {
+                                    "symbol": document.get("symbol"),
+                                    "date": candle.get("timestamp"),
+                                    "adjusted_close_ma": closes_7d_ma[index + (day_of_the_week - 7)]
+                                }
+                            )
+                        except:
+                            dictionary_list.append(
+                                {
+                                    "symbol": document.get("symbol"),
+                                    "date": candle.get("timestamp"),
+                                    "adjusted_close_ma": closes_7d_ma[index + (7 - day_of_the_week)]
+                                }
+                            )
+
+            del closes_7d_ma, document
 
         return pd.DataFrame.from_dict(dictionary_list)
+
+    @staticmethod
+    def is_valid_timeseries_document(document: dict) -> bool:
+        is_valid = True
+
+        if document is None:
+            is_valid = False
+
+        if len(document.get("timeSeries")) == 0:
+            is_valid = False
+
+        if is_valid is False:
+            print(f"Method: is_valid_timeseries_document() returns invalid for document: {str(document)}")
+
+        return is_valid
+
+    @staticmethod
+    def determine_adjusted_close_ma(document: dict, window_size: int) -> pd.Series:
+        closes = pd.Series([time_series.get("adjustedClose") for time_series in document.get("timeSeries")])
+        return closes.rolling(window_size).mean().fillna(method="backfill")
 
     @staticmethod
     @log_time
