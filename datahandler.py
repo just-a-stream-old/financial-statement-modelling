@@ -66,10 +66,11 @@ class DataHandler:
 
     @log_time
     def _get_time_series_df(self, symbols: list, dates: list) -> pd.DataFrame:
-        dictionary_list = []
 
+        # Todo: 1. Sent a few dates and check to see if there is matching timestamps
         # EXTRACT MANY TESTABLE METHODS OUT OF THIS BAD BOY
 
+        dictionary_list = []
         for document in (self.repository.find_one("time_series_d1", {"symbol": symbol}) for symbol in symbols):
 
             if self.is_valid_timeseries_document(document) is False:
@@ -78,48 +79,8 @@ class DataHandler:
             closes_7d_ma = self.determine_adjusted_close_ma(document, window_size=7)
 
             for index, (candle, close) in enumerate(zip(document.get("timeSeries"), closes_7d_ma)):
-
-                # Put below into a function so I can easily continue the outer loop if the date is found
-                # https://stackoverflow.com/questions/1859072/python-continuing-to-next-iteration-in-outer-loop
-
-                for date in dates:
-
-                    day_of_the_week = datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
-
-                    if day_of_the_week < 5:
-
-                        if date == candle.get("timestamp"):
-                            dictionary_list.append(
-                                {
-                                    "symbol": document.get("symbol"),
-                                    "date": candle.get("timestamp"),
-                                    "adjusted_close_ma": close
-                                }
-                            )
-                            print(f"Success at index: {index}")
-
-                        else:
-                            pass
-                            # print(f"Failure at index: {index}, even though it was not a weekend date.")
-
-                    else:
-                        days_since_monday = day_of_the_week - 7
-                        try:
-                            dictionary_list.append(
-                                {
-                                    "symbol": document.get("symbol"),
-                                    "date": candle.get("timestamp"),
-                                    "adjusted_close_ma": closes_7d_ma[index + (day_of_the_week - 7)]
-                                }
-                            )
-                        except:
-                            dictionary_list.append(
-                                {
-                                    "symbol": document.get("symbol"),
-                                    "date": candle.get("timestamp"),
-                                    "adjusted_close_ma": closes_7d_ma[index + (7 - day_of_the_week)]
-                                }
-                            )
+                dictionary_list.extend(self.find_matching_close_for_date(document, closes_7d_ma, dates, index, candle, close))
+                continue
 
             del closes_7d_ma, document
 
@@ -144,6 +105,54 @@ class DataHandler:
     def determine_adjusted_close_ma(document: dict, window_size: int) -> pd.Series:
         closes = pd.Series([time_series.get("adjustedClose") for time_series in document.get("timeSeries")])
         return closes.rolling(window_size).mean().fillna(method="backfill")
+
+    @staticmethod
+    def find_matching_close_for_date(document: dict, closes_7d_ma: list, dates: list, index: int, candle: dict,
+                                     close: float):
+
+        dictionary_list = []
+        for date in dates:
+
+            day_of_the_week = datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
+
+            if day_of_the_week < 5:
+
+                if date == candle.get("timestamp"):
+                    dictionary_list.append(
+                        {
+                            "symbol": document.get("symbol"),
+                            "date": candle.get("timestamp"),
+                            "adjusted_close_ma": close
+                        }
+                    )
+                    print(f"Success at index: {index}")
+
+
+                else:
+                    # Todo: Add logging here at debug level
+                    continue
+
+            else:
+                try:
+                    dictionary_list.append(
+                        {
+                            "symbol": document.get("symbol"),
+                            "date": candle.get("timestamp"),
+                            "adjusted_close_ma": closes_7d_ma[index + (day_of_the_week - 7)]
+                        }
+                    )
+                    # print(f"Success at index: {index} using dummy monday index: {index + (day_of_the_week - 7)}")
+                except:
+                    dictionary_list.append(
+                        {
+                            "symbol": document.get("symbol"),
+                            "date": candle.get("timestamp"),
+                            "adjusted_close_ma": closes_7d_ma[index + (7 - day_of_the_week)]
+                        }
+                    )
+                    # print(f"Success at index: {index} using dummy monday index: {index + (7 - day_of_the_week)}")
+
+        return dictionary_list
 
     @staticmethod
     @log_time
