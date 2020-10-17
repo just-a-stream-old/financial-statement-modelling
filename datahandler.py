@@ -41,6 +41,7 @@ class DataHandler:
         dictionary_list = []
         for document in self._find_all_statement("balance_sheets"):
             for symbol_balance_sheet in document.get("balanceSheets"):
+                symbol_balance_sheet.update({"date": map_to_weekday_datetime(symbol_balance_sheet.get("date"))})
                 dictionary_list.append(symbol_balance_sheet)
         return pd.DataFrame.from_dict(dictionary_list)
 
@@ -52,6 +53,7 @@ class DataHandler:
         dictionary_list = []
         for document in self._find_all_statement("income_statements"):
             for symbol_income_statement in document.get("incomeStatements"):
+                symbol_income_statement.update({"date": map_to_weekday_datetime(symbol_income_statement.get("date"))})
                 dictionary_list.append(symbol_income_statement)
         return pd.DataFrame.from_dict(dictionary_list)
 
