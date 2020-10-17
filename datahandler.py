@@ -23,7 +23,10 @@ class DataHandler:
         df_dict = self.feature_extractor.extract_features(financials_df_dictionary)
 
         # Query Repository For Time Series, Extract Labels, & Add To DataFrame Dictionary
-        df_dict["time_series_labels_df"] = self.feature_extractor.extract_labels(self._get_time_series_df())
+        df_dict["time_series_labels_df"] = self.feature_extractor.extract_labels(
+            self._get_time_series_df(),
+            comparison_symbol="SPY"
+        )
 
         return self.merge_dataframes(df_dict.values(), merge_on_columns=["symbol", "date"])
 
@@ -49,7 +52,7 @@ class DataHandler:
         return pd.DataFrame.from_dict(dictionary_list)
 
     @log_time
-    def get_cash_flow_df(self) -> pd.DataFrame:
+    def _get_cash_flow_df(self) -> pd.DataFrame:
         dictionary_list = []
         for document in self._find_all_statement("cash_flows"):
             for symbol_cash_flow in document.get("cashFlows"):

@@ -16,7 +16,7 @@ class MongoRepository:
     def find(self, collection: str, query: dict):
         return self._return_collection(collection).find(query)
 
-    def find_one(self, collection: str, query=None):
+    def find_one(self, collection: str, query: dict = None):
         return self._return_collection(collection).find_one({} if query is None else query)
 
     def find_all(self, collection: str):

@@ -28,7 +28,9 @@ class FeatureExtractor:
         return features_df_dictionary
 
     @staticmethod
-    def extract_labels(time_series_df: pd.DataFrame) -> pd.DataFrame:
+    def extract_labels(time_series_df: pd.DataFrame, comparison_symbol: str) -> pd.DataFrame:
+        spy_series = time_series_df.loc[time_series_df["symbol"] == comparison_symbol]
+
         return time_series_df
 
 class BalanceSheetExtractor:
@@ -47,6 +49,7 @@ class BalanceSheetExtractor:
         features_df = self.determine_true_working_capital_per_total_current_assets(features_df)
         features_df = self.determine_if_true_working_capital_is_positive(features_df)
         # Additional Features Specific To FMP
+
         # Other Ad Lib Features (No Research)
         features_df = self.determine_long_term_debt_per_total_debt(features_df)
         features_df = self.determine_total_investments_per_total_debt(features_df)
