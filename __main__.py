@@ -10,7 +10,7 @@ if __name__ == '__main__':
     # Todo: Construct dependencies somewhere else (factory?) and inject into service
 
     # Repository Integration
-    repository = MongoRepository("nonprod")
+    repository = MongoRepository("feature_acceptedDate")
 
     # Data Handler
     datahandler = DataHandler(repository, FeatureExtractor())

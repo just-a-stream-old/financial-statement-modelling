@@ -1,8 +1,7 @@
 from functools import reduce
-import datetime
 
 from feature_engineering import FeatureExtractor
-from helper import log_time
+from helper import log_time, map_to_weekday_datetime
 from repository import MongoRepository
 import pandas as pd
 
@@ -24,18 +23,18 @@ class DataHandler:
         # df_dict = self.feature_extractor.extract_features(financials_df_dictionary)
 
         # Query Repository For Time Series
-        time_series_df = self._get_time_series_df(
-            # financials_df_dictionary.get("cash_flow_df")["symbol"].unique().tolist(),
-            # financials_df_dictionary.get("cash_flow_df")["date"].tolist()
-            list({"AAPL", "AAPL", "AAPL", "AAPL", "AAPL", "AAPL", "AAPL"}),
-            ["2020-03-28", "2018-12-29", "2018-06-30", "2011-06-25", "2005-06-25", "1993-06-25", "1991-03-29"]
-        )
+        # time_series_df = self._get_time_series_df(
+        # financials_df_dictionary.get("cash_flow_df")["symbol"].unique().tolist(),
+        # financials_df_dictionary.get("cash_flow_df")["date"].tolist()
+        # list({"AAPL", "AAPL", "AAPL", "AAPL", "AAPL", "AAPL", "AAPL"}),
+        # ["2020-03-28", "2018-12-29", "2018-06-30", "2011-06-25", "2005-06-25", "1993-06-25", "1991-03-29"]
+        # )
 
         # Extract Labels From Time Series
 
         # return self.merge_dataframes(df_dict.values(), merge_on_columns=["symbol", "date", "period"])
-        return time_series_df
-        # return self._get_cash_flow_df()
+        # return time_series_df
+        return self._get_cash_flow_df()
 
     @log_time
     def _get_balance_sheet_df(self) -> pd.DataFrame:
@@ -61,15 +60,12 @@ class DataHandler:
         dictionary_list = []
         for document in self._find_all_statement("cash_flows"):
             for symbol_cash_flow in document.get("cashFlows"):
+                symbol_cash_flow.update({"date": map_to_weekday_datetime(symbol_cash_flow.get("date"))})
                 dictionary_list.append(symbol_cash_flow)
         return pd.DataFrame.from_dict(dictionary_list)
 
     @log_time
     def _get_time_series_df(self, symbols: list, dates: list) -> pd.DataFrame:
-
-        # Todo: 1. Sent a few dates and check to see if there is matching timestamps
-        # EXTRACT MANY TESTABLE METHODS OUT OF THIS BAD BOY
-
         dictionary_list = []
         for document in (self.repository.find_one("time_series_d1", {"symbol": symbol}) for symbol in symbols):
 
@@ -79,12 +75,14 @@ class DataHandler:
             closes_7d_ma = self.determine_adjusted_close_ma(document, window_size=7)
 
             for index, (candle, close) in enumerate(zip(document.get("timeSeries"), closes_7d_ma)):
-                dictionary_list.extend(self.find_matching_close_for_date(document, closes_7d_ma, dates, index, candle, close))
+                dictionary_list.extend(
+                    self.find_matching_close_for_date(document, closes_7d_ma, dates, index, candle, close))
                 continue
 
             del closes_7d_ma, document
 
         return pd.DataFrame.from_dict(dictionary_list)
+
 
     @staticmethod
     def is_valid_timeseries_document(document: dict) -> bool:
@@ -113,7 +111,7 @@ class DataHandler:
         dictionary_list = []
         for date in dates:
 
-            day_of_the_week = datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
+            day_of_the_week = datetime.strptime(date, "%Y-%m-%d").weekday()
 
             if day_of_the_week < 5:
 
