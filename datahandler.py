@@ -1,7 +1,8 @@
 from functools import reduce
+from datetime import datetime
 
 from feature_engineering import FeatureExtractor
-from helper import log_time, map_to_weekday_datetime
+from helper import log_time, map_to_weekday_datetime, parse_datetime_object
 from repository import MongoRepository
 import pandas as pd
 
@@ -22,12 +23,13 @@ class DataHandler:
         # Extract Features From Financials
         # df_dict = self.feature_extractor.extract_features(financials_df_dictionary)
 
+        # dates = ["2020-03-28", "2018-12-29", "2018-06-30", "2011-06-25", "2005-06-25", "1993-06-25", "1991-03-29"]
         # Query Repository For Time Series
         # time_series_df = self._get_time_series_df(
-        # financials_df_dictionary.get("cash_flow_df")["symbol"].unique().tolist(),
-        # financials_df_dictionary.get("cash_flow_df")["date"].tolist()
-        # list({"AAPL", "AAPL", "AAPL", "AAPL", "AAPL", "AAPL", "AAPL"}),
-        # ["2020-03-28", "2018-12-29", "2018-06-30", "2011-06-25", "2005-06-25", "1993-06-25", "1991-03-29"]
+            # financials_df_dictionary.get("cash_flow_df")["symbol"].unique().tolist(), # Todo: the symbols and dates don't match up because of the unique! find a way to ensure i'm getting the correct time series
+            # financials_df_dictionary.get("cash_flow_df")["date"].tolist()
+            # list({"AAPL", "AAPL"}),
+            # [map_to_weekday_datetime(date) for date in dates]
         # )
 
         # Extract Labels From Time Series
@@ -75,16 +77,16 @@ class DataHandler:
                 continue
 
             closes_7d_ma = self.determine_adjusted_close_ma(document, window_size=7)
+            print(closes_7d_ma)
 
-            for index, (candle, close) in enumerate(zip(document.get("timeSeries"), closes_7d_ma)):
+            for candle, close in zip(document.get("timeSeries"), closes_7d_ma):
                 dictionary_list.extend(
-                    self.find_matching_close_for_date(document, closes_7d_ma, dates, index, candle, close))
+                    self.find_matching_close_for_date(document, dates, candle, close))
                 continue
 
             del closes_7d_ma, document
 
         return pd.DataFrame.from_dict(dictionary_list)
-
 
     @staticmethod
     def is_valid_timeseries_document(document: dict) -> bool:
@@ -103,54 +105,30 @@ class DataHandler:
 
     @staticmethod
     def determine_adjusted_close_ma(document: dict, window_size: int) -> pd.Series:
-        closes = pd.Series([time_series.get("adjustedClose") for time_series in document.get("timeSeries")])
+        closes = pd.Series([candle.get("adjustedClose") for candle in document.get("timeSeries")])
         return closes.rolling(window_size).mean().fillna(method="backfill")
 
     @staticmethod
-    def find_matching_close_for_date(document: dict, closes_7d_ma: list, dates: list, index: int, candle: dict,
-                                     close: float):
+    def find_matching_close_for_date(document: dict, dates: list, candle: dict, close: float):
 
         dictionary_list = []
         for date in dates:
 
-            day_of_the_week = datetime.strptime(date, "%Y-%m-%d").weekday()
+            if date.weekday() >= 5:
+                print("Error: date is a weekday!")
+                continue
 
-            if day_of_the_week < 5:
-
-                if date == candle.get("timestamp"):
-                    dictionary_list.append(
-                        {
-                            "symbol": document.get("symbol"),
-                            "date": candle.get("timestamp"),
-                            "adjusted_close_ma": close
-                        }
-                    )
-                    print(f"Success at index: {index}")
-
-
-                else:
-                    # Todo: Add logging here at debug level
-                    continue
-
-            else:
-                try:
-                    dictionary_list.append(
-                        {
-                            "symbol": document.get("symbol"),
-                            "date": candle.get("timestamp"),
-                            "adjusted_close_ma": closes_7d_ma[index + (day_of_the_week - 7)]
-                        }
-                    )
-                    # print(f"Success at index: {index} using dummy monday index: {index + (day_of_the_week - 7)}")
-                except:
-                    dictionary_list.append(
-                        {
-                            "symbol": document.get("symbol"),
-                            "date": candle.get("timestamp"),
-                            "adjusted_close_ma": closes_7d_ma[index + (7 - day_of_the_week)]
-                        }
-                    )
-                    # print(f"Success at index: {index} using dummy monday index: {index + (7 - day_of_the_week)}")
+            if date == parse_datetime_object(candle.get("timestamp")):
+                dictionary_list.append(
+                    {
+                        "symbol": document.get("symbol"),
+                        "date": candle.get("timestamp"),
+                        "adjusted_close_ma": close
+                    }
+                )
+                candle_timestamp = parse_datetime_object(candle.get("timestamp"))
+                print(f"date: {str(date)}, candle_timestamp: {str(candle_timestamp)}")
+                # print(f"Success at index: {index}")
 
         return dictionary_list
 
