@@ -1,5 +1,4 @@
 from functools import reduce
-from datetime import datetime
 
 from feature_engineering import FeatureExtractor
 from helper import log_time, map_to_weekday_datetime, parse_datetime_object
@@ -16,27 +15,17 @@ class DataHandler:
     def generate_dataset(self):
         # Query Repository For Financials
         financials_df_dictionary = {
-            # "balance_sheet_df": self._get_balance_sheet_df(),
-            # "income_statement_df": self._get_income_statement_df(),
-            # "cash_flow_df": self._get_cash_flow_df()
+            "balance_sheet_df": self._get_balance_sheet_df(),
+            "income_statement_df": self._get_income_statement_df(),
+            "cash_flow_df": self._get_cash_flow_df()
         }
         # Extract Features From Financials
-        # df_dict = self.feature_extractor.extract_features(financials_df_dictionary)
+        df_dict = self.feature_extractor.extract_features(financials_df_dictionary)
 
-        dates = ["2020-03-28", "2018-12-29", "2018-06-30", "2011-06-25", "2005-06-25", "1993-06-25", "1991-03-29"]
-        # Query Repository For Time Series
-        time_series_df = self._get_time_series_df(
-            # financials_df_dictionary.get("cash_flow_df")["symbol"].unique().tolist(), # Todo: the symbols and dates don't match up because of the unique! find a way to ensure i'm getting the correct time series
-            # financials_df_dictionary.get("cash_flow_df")["date"].tolist()
-            list({"AAPL", "AAPL"}),
-            [map_to_weekday_datetime(date) for date in dates]
-        )
+        # Query Repository For Time Series, Extract Labels, & Add To DataFrame Dictionary
+        df_dict["time_series_labels_df"] = self.feature_extractor.extract_labels(self._get_time_series_df())
 
-        # Extract Labels From Time Series
-
-        # return self.merge_dataframes(df_dict.values(), merge_on_columns=["symbol", "date", "period"])
-        return time_series_df
-        # return self._get_cash_flow_df()
+        return self.merge_dataframes(df_dict.values(), merge_on_columns=["symbol", "date"])
 
     @log_time
     def _get_balance_sheet_df(self) -> pd.DataFrame:
@@ -60,7 +49,7 @@ class DataHandler:
         return pd.DataFrame.from_dict(dictionary_list)
 
     @log_time
-    def _get_cash_flow_df(self) -> pd.DataFrame:
+    def get_cash_flow_df(self) -> pd.DataFrame:
         dictionary_list = []
         for document in self._find_all_statement("cash_flows"):
             for symbol_cash_flow in document.get("cashFlows"):
@@ -91,23 +80,6 @@ class DataHandler:
 
         return pd.DataFrame.from_dict(dictionary_list)
 
-        # for document in (self.repository.find_one("time_series_d1", {"symbol": symbol}) for symbol in symbols):
-        #
-        #     if self.is_valid_timeseries_document(document) is False:
-        #         continue
-        #
-            # closes_7d_ma = self.determine_adjusted_close_ma(document, window_size=7)
-        #     print(closes_7d_ma)
-        #
-        #     for candle, close in zip(document.get("timeSeries"), closes_7d_ma):
-        #         dictionary_list.extend(
-        #             self.find_matching_close_for_date(document, dates, candle, close))
-        #         continue
-        #
-        #     del closes_7d_ma, document
-        #
-        # return pd.DataFrame.from_dict(dictionary_list)
-
     @staticmethod
     def is_valid_timeseries_document(document: dict) -> bool:
         is_valid = True
@@ -127,30 +99,6 @@ class DataHandler:
     def determine_adjusted_close_ma(document: dict, window_size: int) -> pd.Series:
         closes = pd.Series([candle.get("adjustedClose") for candle in document.get("timeSeries")])
         return closes.rolling(window_size).mean().fillna(method="backfill")
-
-    @staticmethod
-    def find_matching_close_for_date(document: dict, dates: list, candle: dict, close: float):
-
-        dictionary_list = []
-        for date in dates:
-
-            if date.weekday() >= 5:
-                print("Error: date is a weekday!")
-                continue
-
-            if date == parse_datetime_object(candle.get("timestamp")):
-                dictionary_list.append(
-                    {
-                        "symbol": document.get("symbol"),
-                        "date": candle.get("timestamp"),
-                        "adjusted_close_ma": close
-                    }
-                )
-                candle_timestamp = parse_datetime_object(candle.get("timestamp"))
-                print(f"date: {str(date)}, candle_timestamp: {str(candle_timestamp)}")
-                # print(f"Success at index: {index}")
-
-        return dictionary_list
 
     @staticmethod
     @log_time

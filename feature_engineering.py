@@ -8,11 +8,11 @@ class FeatureExtractor:
         pass
 
     @staticmethod
-    def extract_features(statement_df_dictionary: dict) -> dict:
+    def extract_features(financials_df_dictionary: dict) -> dict:
 
         features_df_dictionary = {}
 
-        for statement_type, statement_df in statement_df_dictionary.items():
+        for statement_type, statement_df in financials_df_dictionary.items():
             if statement_type == "balance_sheet_df":
                 features_df_dictionary[statement_type] = BalanceSheetExtractor(statement_df).extract_features()
 
@@ -27,6 +27,9 @@ class FeatureExtractor:
 
         return features_df_dictionary
 
+    @staticmethod
+    def extract_labels(time_series_df: pd.DataFrame) -> pd.DataFrame:
+        return time_series_df
 
 class BalanceSheetExtractor:
 
