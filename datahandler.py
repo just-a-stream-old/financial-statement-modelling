@@ -68,9 +68,11 @@ class DataHandler:
             if self.is_valid_timeseries_document(document) is False:
                 continue
 
-            closes_7d_ma = self.determine_adjusted_close_ma(document, window_size=7)
+            closes_ma = self.determine_adjusted_close_ma(document, window_size=14)
 
-            for candle, close in zip(document.get("timeSeries"), closes_7d_ma):
+            # Todo: Determine labels here so we don't have to groupby and re-merge!
+
+            for candle, close in zip(document.get("timeSeries"), closes_ma):
 
                 dictionary_list.append(
                     {
@@ -79,7 +81,7 @@ class DataHandler:
                         "adjusted_close_ma": close
                     }
                 )
-            del closes_7d_ma, document
+            del closes_ma, document
 
         return pd.DataFrame.from_dict(dictionary_list)
 
@@ -94,6 +96,7 @@ class DataHandler:
             is_valid = False
 
         if is_valid is False:
+            # Todo: Delete from MongoDB please
             print(f"Method: is_valid_timeseries_document() returns invalid for document: {str(document)}")
 
         return is_valid

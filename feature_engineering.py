@@ -31,7 +31,16 @@ class FeatureExtractor:
     def extract_labels(time_series_df: pd.DataFrame, comparison_symbol: str) -> pd.DataFrame:
         spy_series = time_series_df.loc[time_series_df["symbol"] == comparison_symbol]
 
+        # Calculate % change over the last 3 months
+        # spy_series_pct_change_3months = spy_series["adjusted_close_ma"].pct_change(periods=-91)
+
+        # Compare to time_series_df to determine category
+
+        #
+
+
         return time_series_df
+
 
 class BalanceSheetExtractor:
 
